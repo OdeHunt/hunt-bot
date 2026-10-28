@@ -1,0 +1,35 @@
+
+[
+  {
+    "normal": "Superman",
+    "impostor": "Batman"
+  },
+  {
+    "normal": "Gato",
+    "impostor": "Cachorro"
+  },
+  {
+    "normal": "Praia",
+    "impostor": "Piscina"
+  },
+  {
+    "normal": "Pizza",
+    "impostor": "Hambúrguer"
+  },
+  {
+    "normal": "Minecraft",
+    "impostor": "Roblox"
+  },
+  {
+    "normal": "Futebol",
+    "impostor": "Basquete"
+  },
+  {
+    "normal": "Café",
+    "impostor": "Chá"
+  },
+  {
+    "normal": "Batman",
+    "impostor": "Homem-Aranha"
+  }
+]

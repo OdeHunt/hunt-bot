@@ -1179,7 +1179,8 @@ bot.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
-    // Botões de convite do desafio.
+    
+    // Botões de convite do desafio e do Impostor.
     if (interaction.isButton()) {
       if (interaction.customId.startsWith('desafio_aceitar:')) {
         const idConvite = interaction.customId.slice('desafio_aceitar:'.length);
@@ -1190,45 +1191,92 @@ bot.on(Events.InteractionCreate, async interaction => {
         const idConvite = interaction.customId.slice('desafio_recusar:'.length);
         return await recusarDesafio(interaction, idConvite);
       }
-if (interaction.customId.startsWith('impostor_responder:')) {
-  const [, partidaId, jogadorId] = interaction.customId.split(':');
 
-  await jogoImpostor.abrirFormularioResposta(
-    interaction,
-    partidaId,
-    jogadorId
-  );
+      // Modo clássico: jogador vai fazer uma pergunta.
+      if (interaction.customId.startsWith('impostor_classico_perguntar:')) {
+        const [, partidaId, perguntadorId] = interaction.customId.split(':');
 
-  return;
-}
-
-  if (interaction.customId.startsWith('impostor_pagina:')) {
-        await jogoImpostor.processarPaginaVotacao(interaction);
-        return;
+        return await jogoImpostor.abrirFormularioPerguntaClassica(
+          interaction,
+          partidaId,
+          perguntadorId
+        );
       }
 
-if (interaction.customId.startsWith('impostor_')) {
-  await impostor.processarBotao(interaction);
-  return;
-}
+      // Modo clássico: jogador escolhido vai responder.
+      if (interaction.customId.startsWith('impostor_classico_responder:')) {
+        const [, partidaId, alvoId] = interaction.customId.split(':');
+
+        return await jogoImpostor.abrirFormularioRespostaClassica(
+          interaction,
+          partidaId,
+          alvoId
+        );
+      }
+
+      // Modo normal: abrir formulário para responder.
+      if (interaction.customId.startsWith('impostor_responder:')) {
+        const [, partidaId, jogadorId] = interaction.customId.split(':');
+
+        return await jogoImpostor.abrirFormularioResposta(
+          interaction,
+          partidaId,
+          jogadorId
+        );
+      }
+
+      // Paginação do menu de votação.
+      if (interaction.customId.startsWith('impostor_pagina:')) {
+        return await jogoImpostor.processarPaginaVotacao(interaction);
+      }
+
+      // Outros botões do lobby do Impostor.
+      if (interaction.customId.startsWith('impostor_')) {
+        return await impostor.processarBotao(interaction);
+      }
 
       return;
     }
 
-    if (
-  interaction.isModalSubmit() &&
-  interaction.customId.startsWith('impostor_resposta:')
-) {
-  await jogoImpostor.salvarResposta(interaction);
-  return;
-}
+
+   
+    // Formulários do modo clássico e do modo normal.
+    if (interaction.isModalSubmit()) {
+      // Modo clássico: salvar a pergunta escrita pelo jogador.
+      if (interaction.customId.startsWith('impostor_classico_pergunta:')) {
+        return await jogoImpostor.salvarPerguntaClassica(interaction);
+      }
+
+      // Modo clássico: salvar a resposta do jogador escolhido.
+      if (interaction.customId.startsWith('impostor_classico_resposta:')) {
+        return await jogoImpostor.salvarRespostaClassica(interaction);
+      }
+
+      // Modo normal: salvar a resposta privada.
+      if (interaction.customId.startsWith('impostor_resposta:')) {
+        return await jogoImpostor.salvarResposta(interaction);
+      }
+    }
+
 
     if (!interaction.isChatInputCommand()) return;
 
+   
+      
     if (interaction.commandName === 'impostor') {
-       await impostor.iniciarComando(interaction);
-        return;
-}
+      const subcomando = interaction.options.getSubcommand(false);
+
+      if (subcomando === 'classico') {
+        return await impostor.iniciarComandoClassico(interaction);
+      }
+
+       if (subcomando === 'jogar') {
+      return await impostor.iniciarComando(interaction);
+    }
+
+
+      return;
+    }
 
     // --------------------------------------------------
     // COMANDO /TERMO

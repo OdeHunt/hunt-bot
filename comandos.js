@@ -10,6 +10,22 @@ const {
 } = require('discord.js');
 
 const comandos = [
+  
+  new SlashCommandBuilder()
+    .setName('impostor')
+    .setDescription('Comandos do jogo Impostor')
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('jogar')
+        .setDescription('Inicia uma partida do Impostor no modo normal')
+    )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('classico')
+        .setDescription('Inicia uma partida do Impostor no modo clássico')
+    ),
+
+
   new SlashCommandBuilder()
     .setName('termo')
     .setDescription('Comandos do jogo Termo')
@@ -19,55 +35,46 @@ const comandos = [
         .setName('jogar')
         .setDescription('Inicia o Termo normal')
     )
-
     .addSubcommand(subcommand =>
       subcommand
         .setName('dueto')
         .setDescription('Inicia o Termo com dois tabuleiros')
     )
-
     .addSubcommand(subcommand =>
       subcommand
         .setName('quarteto')
         .setDescription('Inicia o Termo com quatro tabuleiros')
     )
-
     .addSubcommand(subcommand =>
       subcommand
         .setName('ranked')
         .setDescription('Inicia uma partida Ranked individual')
     )
-
     .addSubcommand(subcommand =>
       subcommand
         .setName('dueto-ranked')
         .setDescription('Inicia o Dueto Ranked individual')
     )
-
     .addSubcommand(subcommand =>
       subcommand
         .setName('quarteto-ranked')
         .setDescription('Inicia o Quarteto Ranked individual')
     )
-
     .addSubcommand(subcommand =>
       subcommand
         .setName('placar')
         .setDescription('Mostra o ranking global do Termo')
     )
-
     .addSubcommand(subcommand =>
       subcommand
         .setName('dica')
         .setDescription('Revela uma letra no tabuleiro')
     )
-
     .addSubcommand(subcommand =>
       subcommand
         .setName('encerrar')
         .setDescription('Encerra sua partida ou a partida normal do canal')
     )
-
     .addSubcommand(subcommand =>
       subcommand
         .setName('desafio')
@@ -79,7 +86,6 @@ const comandos = [
             .setRequired(true)
         )
     )
-
     .addSubcommand(subcommand =>
       subcommand
         .setName('desafio-dueto')
@@ -91,7 +97,6 @@ const comandos = [
             .setRequired(true)
         )
     )
-
     .addSubcommand(subcommand =>
       subcommand
         .setName('desafio-quarteto')
@@ -103,7 +108,6 @@ const comandos = [
             .setRequired(true)
         )
     )
-
     .addSubcommand(subcommand =>
       subcommand
         .setName('confronto')
@@ -148,7 +152,7 @@ async function registrar() {
     { body: comandos }
   );
 
-  console.log('Comandos registrados com sucesso!');
+  console.log('Comandos globais registrados com sucesso!');
 }
 
 registrar().catch(console.error);

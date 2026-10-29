@@ -8,7 +8,8 @@ const {
   AttachmentBuilder,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
+  ButtonStyle,
+  ModalBuilder
 } = require('discord.js');
 
 const fs = require('fs');
@@ -16,6 +17,7 @@ const path = require('path');
 
 const { criarTabuleiro } = require('./tabuleiro');
 const impostor = require('./impostor/impostor');
+const jogoImpostor = require('./impostor/jogo');
 const {
   partidas,
   iniciarPartida,
@@ -1167,6 +1169,16 @@ async function processarTentativaDesafio(interaction, tentativaOriginal) {
 
 bot.on(Events.InteractionCreate, async interaction => {
   try {
+
+ // Menu de votação pública do Impostor
+    if (
+      interaction.isStringSelectMenu() &&
+      interaction.customId.startsWith('impostor_votar:')
+    ) {
+      await jogoImpostor.processarSelecaoVoto(interaction);
+      return;
+    }
+
     // Botões de convite do desafio.
     if (interaction.isButton()) {
       if (interaction.customId.startsWith('desafio_aceitar:')) {
@@ -1178,14 +1190,38 @@ bot.on(Events.InteractionCreate, async interaction => {
         const idConvite = interaction.customId.slice('desafio_recusar:'.length);
         return await recusarDesafio(interaction, idConvite);
       }
+if (interaction.customId.startsWith('impostor_responder:')) {
+  const [, partidaId, jogadorId] = interaction.customId.split(':');
 
-       if (interaction.customId.startsWith('impostor_')) {
-         await impostor.processarBotao(interaction);
-         return;
-  }
+  await jogoImpostor.abrirFormularioResposta(
+    interaction,
+    partidaId,
+    jogadorId
+  );
+
+  return;
+}
+
+  if (interaction.customId.startsWith('impostor_pagina:')) {
+        await jogoImpostor.processarPaginaVotacao(interaction);
+        return;
+      }
+
+if (interaction.customId.startsWith('impostor_')) {
+  await impostor.processarBotao(interaction);
+  return;
+}
 
       return;
     }
+
+    if (
+  interaction.isModalSubmit() &&
+  interaction.customId.startsWith('impostor_resposta:')
+) {
+  await jogoImpostor.salvarResposta(interaction);
+  return;
+}
 
     if (!interaction.isChatInputCommand()) return;
 

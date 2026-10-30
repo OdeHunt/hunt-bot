@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 
 const {
@@ -16,7 +15,23 @@ const fs = require('fs');
 const path = require('path');
 
 const { criarTabuleiro } = require('./tabuleiro');
+
+// Importação direta do módulo do Impostor.
+// Os logs abaixo mostram exatamente o arquivo carregado e suas exportações.
+const caminhoImpostor = require.resolve('./impostor/impostor');
 const impostor = require('./impostor/impostor');
+
+console.log('=== TESTE DO IMPOSTOR ===');
+console.log('ARQUIVO DO IMPOSTOR:', caminhoImpostor);
+console.log('FUNÇÕES EXPORTADAS:', Object.keys(impostor));
+console.log(
+  'TIPO DA FUNÇÃO CLÁSSICA:',
+  typeof impostor.iniciarComandoClassico
+);
+console.log('TIPO DA FUNÇÃO NORMAL:', typeof impostor.iniciarComando);
+console.log('TIPO DO PROCESSADOR DE BOTÕES:', typeof impostor.processarBotao);
+console.log('=========================');
+
 const jogoImpostor = require('./impostor/jogo');
 const {
   partidas,
@@ -197,35 +212,23 @@ function registrarPontuacao(partida) {
   salvarPontuacoes(pontuacoes);
 }
 
+// Diagnóstico temporário: mostra no próprio Discord os dados que o processo
+// atual realmente leu de pontuacoes.json. Não altera nem salva pontuações.
 async function mostrarRanking(interaction) {
   const pontuacoes = carregarPontuacoes();
 
-  const ranking = Object.entries(pontuacoes)
-    .sort((a, b) => (b[1].pontos || 0) - (a[1].pontos || 0))
-    .slice(0, 10);
-
-  if (!ranking.length) {
-    return interaction.reply({
-      content: 'Ainda não há pontuações no ranking.',
-      ephemeral: true
-    });
-  }
-
-  const linhas = await Promise.all(
-    ranking.map(async ([id, dados], indice) => {
-      let nome = `<@${id}>`;
-
-      try {
-        const usuario = await bot.users.fetch(id);
-        nome = usuario.username;
-      } catch {}
-
-      return `**${indice + 1}.** ${nome} — ${dados.pontos || 0} pontos`;
-    })
-  );
+  const diagnostico = Object.entries(pontuacoes)
+    .map(([id, dados]) =>
+      `${dados.nome || id}: ${dados.pontos || 0} pontos`
+    )
+    .join('\n');
 
   return interaction.reply({
-    content: `🏆 **Ranking global do Termo**\n\n${linhas.join('\n')}`
+    content:
+      `**DIAGNÓSTICO DO RANKING**\n` +
+      `Arquivo: \`${arquivoPontuacoes}\`\n\n` +
+      `${diagnostico || 'Nenhuma pontuação encontrada.'}`,
+    ephemeral: true
   });
 }
 
@@ -470,8 +473,6 @@ function limparDesafio(desafio) {
   desafios.delete(desafio.id);
 }
 
-
-
 async function apagarMensagensPrivadasDesafio(desafio) {
   // 1. Apaga as mensagens normais enviadas pelo bot nas DMs.
   for (const usuarioId of [
@@ -538,8 +539,6 @@ async function apagarMensagensPrivadasDesafio(desafio) {
     }
   }
 }
-
-
 
 async function atualizarTabuleiroPrivado(usuarioId, desafio) {
   const tabuleiros = obterTabuleirosDesafio(desafio, usuarioId);
@@ -656,26 +655,24 @@ async function terminarDesafio(desafio, vencedorId = null, motivo = '') {
       `🏆 **<@${vencedorId}> venceu o desafio contra <@${perdedorId}>!**`;
   }
 
-  
   if (motivo) resultado += `\n${motivo}`;
 
   const palavrasDesafiante = obterTabuleirosDesafio(
-  desafio,
-  desafio.desafianteId
-).map(tabuleiro => tabuleiro.palavra);
+    desafio,
+    desafio.desafianteId
+  ).map(tabuleiro => tabuleiro.palavra);
 
-const palavrasDesafiado = obterTabuleirosDesafio(
-  desafio,
-  desafio.desafiadoId
-).map(tabuleiro => tabuleiro.palavra);
+  const palavrasDesafiado = obterTabuleirosDesafio(
+    desafio,
+    desafio.desafiadoId
+  ).map(tabuleiro => tabuleiro.palavra);
 
-resultado +=
-  `\n\n🔤 **Palavras do desafio:**\n` +
-  `<@${desafio.desafianteId}>: **${palavrasDesafiante.join(', ')}**\n` +
-  `<@${desafio.desafiadoId}>: **${palavrasDesafiado.join(', ')}**`;
+  resultado +=
+    `\n\n🔤 **Palavras do desafio:**\n` +
+    `<@${desafio.desafianteId}>: **${palavrasDesafiante.join(', ')}**\n` +
+    `<@${desafio.desafiadoId}>: **${palavrasDesafiado.join(', ')}**`;
 
   await anunciarNoCanal(desafio, resultado);
-
 
   // Tenta enviar o resultado final e a resposta de cada jogador por DM.
   for (const usuarioId of [
@@ -683,39 +680,38 @@ resultado +=
     desafio.desafiadoId
   ]) {
     try {
-     const usuario = await bot.users.fetch(usuarioId);
+      const usuario = await bot.users.fetch(usuarioId);
 
-const tabuleiros = obterTabuleirosDesafio(desafio, usuarioId);
+      const tabuleiros = obterTabuleirosDesafio(desafio, usuarioId);
 
-const buffer = criarTabuleiro(
-  tabuleiros,
-  modoVisual(desafio.modo || 'termo')
-);
-     
-const adversarioId =
-  usuarioId === desafio.desafianteId
-    ? desafio.desafiadoId
-    : desafio.desafianteId;
+      const buffer = criarTabuleiro(
+        tabuleiros,
+        modoVisual(desafio.modo || 'termo')
+      );
 
-const palavrasAdversario = obterTabuleirosDesafio(
-  desafio,
-  adversarioId
-).map(tabuleiro => tabuleiro.palavra);
+      const adversarioId =
+        usuarioId === desafio.desafianteId
+          ? desafio.desafiadoId
+          : desafio.desafianteId;
 
-const minhasPalavras = tabuleiros.map(tabuleiro => tabuleiro.palavra);
+      const palavrasAdversario = obterTabuleirosDesafio(
+        desafio,
+        adversarioId
+      ).map(tabuleiro => tabuleiro.palavra);
 
-const mensagemFinal = await usuario.send({
-  content:
-    `🏁 **Desafio finalizado**\n${resultado}\n\n` +
-    `🔤 Suas palavras eram: **${minhasPalavras.join(', ')}**\n` +
-    `⚔️ Palavras do adversário: **${palavrasAdversario.join(', ')}**`,
-  files: [
-    new AttachmentBuilder(buffer, {
-      name: 'tabuleiro-final.png'
-    })
-  ]
-});
+      const minhasPalavras = tabuleiros.map(tabuleiro => tabuleiro.palavra);
 
+      await usuario.send({
+        content:
+          `🏁 **Desafio finalizado**\n${resultado}\n\n` +
+          `🔤 Suas palavras eram: **${minhasPalavras.join(', ')}**\n` +
+          `⚔️ Palavras do adversário: **${palavrasAdversario.join(', ')}**`,
+        files: [
+          new AttachmentBuilder(buffer, {
+            name: 'tabuleiro-final.png'
+          })
+        ]
+      });
 
       // Apaga o tabuleiro antigo, mantendo a mensagem final.
       const mensagemAntigaId = desafio.mensagensPrivadas[usuarioId];
@@ -733,8 +729,6 @@ const mensagemFinal = await usuario.send({
           );
         }
       }
-
-
     } catch (erro) {
       console.error(
         `Não foi possível enviar o resultado privado para ${usuarioId}:`,
@@ -746,11 +740,11 @@ const mensagemFinal = await usuario.send({
   limparDesafio(desafio);
 
   // Aguarda 30 segundos para os jogadores lerem o resultado.
-setTimeout(() => {
-  apagarMensagensPrivadasDesafio(desafio).catch(erro => {
-    console.error('Erro ao limpar as mensagens do desafio:', erro);
-  });
-}, 30 * 1000);
+  setTimeout(() => {
+    apagarMensagensPrivadasDesafio(desafio).catch(erro => {
+      console.error('Erro ao limpar as mensagens do desafio:', erro);
+    });
+  }, 30 * 1000);
 }
 
 async function iniciarDesafio(interaction, alvo, modo = 'termo') {
@@ -817,11 +811,11 @@ async function iniciarDesafio(interaction, alvo, modo = 'termo') {
 
   await interaction.reply({
     content:
-  `⚔️ ${alvo}, você foi desafiado por ${interaction.user} para uma partida de Termo ${modo === 'dueto' ? 'Dueto' : modo === 'quarteto' ? 'Quarteto' : 'X1'}!\n` +
-  (modo === 'termo'
-    ? 'Cada jogador terá uma palavra diferente e seis tentativas. '
-    : `Cada jogador terá ${modo === 'dueto' ? 'dois tabuleiros e sete tentativas por tabuleiro' : 'quatro tabuleiros e nove tentativas por tabuleiro'}. `) +
-  `Você tem dois minutos para aceitar ou recusar.`,
+      `⚔️ ${alvo}, você foi desafiado por ${interaction.user} para uma partida de Termo ${modo === 'dueto' ? 'Dueto' : modo === 'quarteto' ? 'Quarteto' : 'X1'}!\n` +
+      (modo === 'termo'
+        ? 'Cada jogador terá uma palavra diferente e seis tentativas. '
+        : `Cada jogador terá ${modo === 'dueto' ? 'dois tabuleiros e sete tentativas por tabuleiro' : 'quatro tabuleiros e nove tentativas por tabuleiro'}. `) +
+      `Você tem dois minutos para aceitar ou recusar.`,
     components: [botoes]
   });
 
@@ -900,73 +894,69 @@ async function aceitarDesafio(interaction, idConvite) {
     });
   }
 
- 
+  const modo = convite.modo || 'termo';
 
-const modo = convite.modo || 'termo';
+  const quantidadeTabuleiros =
+    modo === 'quarteto' ? 4 :
+    modo === 'dueto' ? 2 : 1;
 
-const quantidadeTabuleiros =
-  modo === 'quarteto' ? 4 :
-  modo === 'dueto' ? 2 : 1;
+  let palavras1 = [];
+  let palavras2 = [];
 
-let palavras1 = [];
-let palavras2 = [];
-
-try {
+  try {
     const lista = carregarListaValida(false);
-  const palavrasDisponiveis = [...lista];
+    const palavrasDisponiveis = [...lista];
 
-  if (palavrasDisponiveis.length < quantidadeTabuleiros * 2) {
-    throw new Error(
-      `São necessárias pelo menos ${quantidadeTabuleiros * 2} palavras diferentes no arquivo palavras.txt.`
+    if (palavrasDisponiveis.length < quantidadeTabuleiros * 2) {
+      throw new Error(
+        `São necessárias pelo menos ${quantidadeTabuleiros * 2} palavras diferentes no arquivo palavras.txt.`
+      );
+    }
+
+    for (let i = palavrasDisponiveis.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [palavrasDisponiveis[i], palavrasDisponiveis[j]] =
+        [palavrasDisponiveis[j], palavrasDisponiveis[i]];
+    }
+
+    palavras1 = palavrasDisponiveis.slice(0, quantidadeTabuleiros);
+    palavras2 = palavrasDisponiveis.slice(
+      quantidadeTabuleiros,
+      quantidadeTabuleiros * 2
     );
+  } catch (erro) {
+    convites.delete(idConvite);
+    clearTimeout(convite.timeout);
+    convitesPorUsuario.delete(convite.desafianteId);
+    convitesPorUsuario.delete(convite.desafiadoId);
+
+    return interaction.update({
+      content: `Não foi possível iniciar o desafio: ${erro.message}`,
+      components: []
+    });
   }
-
-  for (let i = palavrasDisponiveis.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [palavrasDisponiveis[i], palavrasDisponiveis[j]] =
-      [palavrasDisponiveis[j], palavrasDisponiveis[i]];
-  }
-
-  palavras1 = palavrasDisponiveis.slice(0, quantidadeTabuleiros);
-  palavras2 = palavrasDisponiveis.slice(
-    quantidadeTabuleiros,
-    quantidadeTabuleiros * 2
-  );
-} catch (erro) {
-  convites.delete(idConvite);
-  clearTimeout(convite.timeout);
-  convitesPorUsuario.delete(convite.desafianteId);
-  convitesPorUsuario.delete(convite.desafiadoId);
-
-  return interaction.update({
-    content: `Não foi possível iniciar o desafio: ${erro.message}`,
-    components: []
-  });
-}
-
 
   clearTimeout(convite.timeout);
   convites.delete(idConvite);
   convitesPorUsuario.delete(convite.desafianteId);
   convitesPorUsuario.delete(convite.desafiadoId);
 
-  
-const desafio = {
-  id: idConvite,
-  guildId: convite.guildId,
-  canalId: convite.canalId,
-  desafianteId: convite.desafianteId,
-  desafiadoId: convite.desafiadoId,
-  modo: convite.modo || 'termo',
-  jogadores: {
-    [convite.desafianteId]: palavras1.map(criarTabuleiroDesafio),
-    [convite.desafiadoId]: palavras2.map(criarTabuleiroDesafio)
-  },
-  mensagensPrivadas: {},
-  interacoesPrivadas: [],
-  finalizado: false,
-  historicoRegistrado: false
-};
+  const desafio = {
+    id: idConvite,
+    guildId: convite.guildId,
+    canalId: convite.canalId,
+    desafianteId: convite.desafianteId,
+    desafiadoId: convite.desafiadoId,
+    modo: convite.modo || 'termo',
+    jogadores: {
+      [convite.desafianteId]: palavras1.map(criarTabuleiroDesafio),
+      [convite.desafiadoId]: palavras2.map(criarTabuleiroDesafio)
+    },
+    mensagensPrivadas: {},
+    interacoesPrivadas: [],
+    finalizado: false,
+    historicoRegistrado: false
+  };
 
   desafios.set(desafio.id, desafio);
   desafioPorUsuario.set(desafio.desafianteId, desafio.id);
@@ -1021,7 +1011,6 @@ async function recusarDesafio(interaction, idConvite) {
     components: []
   });
 }
-
 
 async function processarTentativaDesafio(interaction, tentativaOriginal) {
   const desafio = obterDesafioDoJogador(interaction.user.id);
@@ -1162,15 +1151,13 @@ async function processarTentativaDesafio(interaction, tentativaOriginal) {
   return true;
 }
 
-
 // ==================================================
 // INTERAÇÕES
 // ==================================================
 
 bot.on(Events.InteractionCreate, async interaction => {
   try {
-
- // Menu de votação pública do Impostor
+    // Menu de votação pública do Impostor
     if (
       interaction.isStringSelectMenu() &&
       interaction.customId.startsWith('impostor_votar:')
@@ -1179,7 +1166,16 @@ bot.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
-    
+    // Modo clássico: processar a escolha de quem responderá.
+    if (
+      interaction.isUserSelectMenu() &&
+      interaction.customId.startsWith('impostor_classico_alvo:')
+    ) {
+      return await jogoImpostor.processarSelecaoAlvoPerguntaClassica(
+        interaction
+      );
+    }
+
     // Botões de convite do desafio e do Impostor.
     if (interaction.isButton()) {
       if (interaction.customId.startsWith('desafio_aceitar:')) {
@@ -1238,8 +1234,6 @@ bot.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
-
-   
     // Formulários do modo clássico e do modo normal.
     if (interaction.isModalSubmit()) {
       // Modo clássico: salvar a pergunta escrita pelo jogador.
@@ -1258,22 +1252,82 @@ bot.on(Events.InteractionCreate, async interaction => {
       }
     }
 
-
     if (!interaction.isChatInputCommand()) return;
 
-   
-      
+    // BACKUP TEMPORÁRIO DO PLACAR
+    if (interaction.commandName === 'backupplacar') {
+      if (interaction.user.id !== '586380061071114250') {
+        return interaction.reply({
+          content: 'Você não tem permissão para usar este comando.',
+          ephemeral: true
+        });
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      try {
+        if (!fs.existsSync(arquivoPontuacoes)) {
+          return interaction.editReply(
+            'O arquivo pontuacoes.json não foi encontrado.'
+          );
+        }
+
+        const arquivo = new AttachmentBuilder(
+          fs.readFileSync(arquivoPontuacoes),
+          { name: 'pontuacoes-fadehost.json' }
+        );
+
+        await interaction.user.send({
+          content: 'Backup das pontuações da FadeHost:',
+          files: [arquivo]
+        });
+
+        return interaction.editReply(
+          'Backup enviado para sua mensagem privada!'
+        );
+      } catch (erro) {
+        console.error('Erro ao gerar backup:', erro);
+
+        return interaction.editReply(
+          'Não consegui enviar o backup. Verifique se suas mensagens privadas estão abertas.'
+        );
+      }
+    }
+
     if (interaction.commandName === 'impostor') {
       const subcomando = interaction.options.getSubcommand(false);
 
       if (subcomando === 'classico') {
+        if (typeof impostor.iniciarComandoClassico !== 'function') {
+          console.error(
+            'O módulo do Impostor não exportou iniciarComandoClassico.',
+            {
+              arquivo: caminhoImpostor,
+              exportacoes: Object.keys(impostor),
+              tipo: typeof impostor.iniciarComandoClassico
+            }
+          );
+
+          return interaction.reply({
+            content:
+              'O módulo do Impostor foi carregado incorretamente. ' +
+              'Confira no console as informações de diagnóstico.',
+            ephemeral: true
+          });
+        }
+
         return await impostor.iniciarComandoClassico(interaction);
       }
 
-       if (subcomando === 'jogar') {
-      return await impostor.iniciarComando(interaction);
-    }
+      if (subcomando === 'jogar') {
+        if (typeof impostor.iniciarComando !== 'function') {
+          throw new Error(
+            'O módulo do Impostor não exportou a função iniciarComando.'
+          );
+        }
 
+        return await impostor.iniciarComando(interaction);
+      }
 
       return;
     }
@@ -1294,23 +1348,21 @@ bot.on(Events.InteractionCreate, async interaction => {
         return await mostrarConfronto(interaction, outroUsuario);
       }
 
-      
-if (['desafio', 'desafio-dueto', 'desafio-quarteto'].includes(subcomando)) {
-  const alvo = interaction.options.getUser('jogador', true);
+      if (['desafio', 'desafio-dueto', 'desafio-quarteto'].includes(subcomando)) {
+        const alvo = interaction.options.getUser('jogador', true);
 
-  const modosDesafio = {
-    desafio: 'termo',
-    'desafio-dueto': 'dueto',
-    'desafio-quarteto': 'quarteto'
-  };
+        const modosDesafio = {
+          desafio: 'termo',
+          'desafio-dueto': 'dueto',
+          'desafio-quarteto': 'quarteto'
+        };
 
-  return await iniciarDesafio(
-    interaction,
-    alvo,
-    modosDesafio[subcomando]
-  );
-}
-
+        return await iniciarDesafio(
+          interaction,
+          alvo,
+          modosDesafio[subcomando]
+        );
+      }
 
       if (!interaction.guildId || !interaction.channelId) {
         return interaction.reply({
@@ -1545,42 +1597,38 @@ if (['desafio', 'desafio-dueto', 'desafio-quarteto'].includes(subcomando)) {
         });
       }
 
-      
-let acertouAlguma = false;
+      let acertouAlguma = false;
 
-for (const tabuleiro of partida.tabuleiros) {
-  if (tabuleiro.terminou) continue;
+      for (const tabuleiro of partida.tabuleiros) {
+        if (tabuleiro.terminou) continue;
 
-  const cores = verificarPalavra(palavra, tabuleiro.palavra);
+        const cores = verificarPalavra(palavra, tabuleiro.palavra);
 
-  tabuleiro.tentativas.push({
-    palavra,
-    letras: palavra.split(''),
-    cores
-  });
+        tabuleiro.tentativas.push({
+          palavra,
+          letras: palavra.split(''),
+          cores
+        });
 
-  const acertou = cores.every(cor => cor === 'certa');
+        const acertou = cores.every(cor => cor === 'certa');
 
-  if (acertou) {
-    acertouAlguma = true;
-  }
+        if (acertou) {
+          acertouAlguma = true;
+        }
 
-  if (
-    acertou ||
-    tabuleiro.tentativas.length >= limiteTentativas(modoVisual(partida.modo))
-  ) {
-    tabuleiro.terminou = true;
-  }
-}
-
+        if (
+          acertou ||
+          tabuleiro.tentativas.length >= limiteTentativas(modoVisual(partida.modo))
+        ) {
+          tabuleiro.terminou = true;
+        }
+      }
 
       const todosTerminaram = partida.tabuleiros.every(
         tabuleiro => tabuleiro.terminou
       );
 
-      
       let conteudo = `Tentativa enviada por ${interaction.user}.`;
-
 
       if (todosTerminaram) {
         conteudo += `\n\n**Respostas:**\n${montarRespostas(partida)}`;
@@ -1595,14 +1643,12 @@ for (const tabuleiro of partida.tabuleiros) {
 
       await atualizarTabuleiro(interaction.channel, partida, conteudo);
 
-      
-return interaction.reply({
-  content: acertouAlguma
-    ? '🎉 Parabéns! Você acertou a palavra!'
-    : 'Tentativa registrada!',
-  ephemeral: true
-});
-
+      return interaction.reply({
+        content: acertouAlguma
+          ? '🎉 Parabéns! Você acertou a palavra!'
+          : 'Tentativa registrada!',
+        ephemeral: true
+      });
     }
   } catch (erro) {
     console.error('Erro ao processar interação:', erro);

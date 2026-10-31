@@ -212,23 +212,35 @@ function registrarPontuacao(partida) {
   salvarPontuacoes(pontuacoes);
 }
 
-// Diagnóstico temporário: mostra no próprio Discord os dados que o processo
-// atual realmente leu de pontuacoes.json. Não altera nem salva pontuações.
+// ==================================================
+// RANKING DO TERMO
+// ==================================================
+
 async function mostrarRanking(interaction) {
   const pontuacoes = carregarPontuacoes();
 
-  const diagnostico = Object.entries(pontuacoes)
-    .map(([id, dados]) =>
-      `${dados.nome || id}: ${dados.pontos || 0} pontos`
-    )
-    .join('\n');
+  const ranking = Object.entries(pontuacoes)
+    .sort((a, b) => (b[1].pontos || 0) - (a[1].pontos || 0));
+
+  const medalhas = ['🥇', '🥈', '🥉'];
+
+  const linhas = ranking.map(([id, dados], index) => {
+    const posicao = medalhas[index] || `**${index + 1}º**`;
+    const nome = dados.nome || `Jogador ${id}`;
+    const pontos = (dados.pontos || 0).toLocaleString('pt-BR');
+
+    return `${posicao} **${nome}**\n　　 🟠 **${pontos} pontos**`;
+  });
+
+  const mensagem =
+    `🟠 **RANKING DO TERMO**\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n\n` +
+    `${linhas.join('\n\n') || 'Nenhuma pontuação registrada.'}\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `🏆 *Continue jogando para subir no ranking!*`;
 
   return interaction.reply({
-    content:
-      `**DIAGNÓSTICO DO RANKING**\n` +
-      `Arquivo: \`${arquivoPontuacoes}\`\n\n` +
-      `${diagnostico || 'Nenhuma pontuação encontrada.'}`,
-    ephemeral: true
+    content: mensagem
   });
 }
 

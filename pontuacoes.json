@@ -1,14 +1,15 @@
 {
   "586380061071114250": {
     "nome": "odehunt",
-    "pontos": 60,
-    "partidas": 1
+    "pontos": 120,
+    "partidas": 2,
+    "vitorias": 2
   },
   "456253121560182794": {
     "nome": "mabe00",
-    "pontos": 635,
-    "partidas": 7,
-    "vitorias": 3
+    "pontos": 2100,
+    "partidas": 22,
+    "vitorias": 18
   },
   "698590409714303016": {
     "nome": "twine_obverse",
